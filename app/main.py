@@ -20,7 +20,7 @@ audit = logging.getLogger("audit")
 
 # In-memory store (demo only - a real system would use an encrypted database)
 PATIENTS = {
-    1: {"id": 1, "name": "Asha Verma", "age": 34, "ward": "Cardiology"},
+    1: {"id": 1, "name": "Asha Sharma", "age": 34, "ward": "Cardiology"},
     2: {"id": 2, "name": "Rohan Mehta", "age": 52, "ward": "Orthopedics"},
 }
 

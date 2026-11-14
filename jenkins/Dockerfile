@@ -19,7 +19,7 @@ RUN DARCH="$(dpkg --print-architecture)" \
  && chmod +x /usr/local/bin/kubectl
 
 # Trivy (dependency, image and Kubernetes-manifest scanning)
-RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/v0.57.1/contrib/install.sh | sh -s -- -b /usr/local/bin v0.57.1
+COPY --from=aquasec/trivy:0.57.1 /usr/local/bin/trivy /usr/local/bin/trivy
 
 # Gitleaks (secret scanning)
 RUN DARCH="$(dpkg --print-architecture)"; [ "$DARCH" = "amd64" ] && GARCH=x64 || GARCH=arm64; \

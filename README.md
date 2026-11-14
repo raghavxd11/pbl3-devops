@@ -41,7 +41,7 @@ notepad .env                  # set GIT_REPO_URL to your GitHub repo URL
 docker compose up -d --build  # first build takes about 3-5 min
 docker logs -f jenkins        # wait for "[pbl] job ready" x3 and "Jenkins is fully up and running"
 ```
-Then open **http://localhost:8080**. You should see the 3 jobs.
+Then open **http://localhost:8090**. You should see the 3 jobs.
 
 Check that Jenkins can reach Kubernetes:
 ```powershell

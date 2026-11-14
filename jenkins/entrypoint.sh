@@ -4,9 +4,9 @@
 # addresses to kubernetes.docker.internal (mapped to the host in docker-compose).
 mkdir -p /root/.kube
 if [ -f /root/.kube-host/config ]; then
-  sed -e 's#https://127.0.0.1:#https://kubernetes.docker.internal:#g' \
-      -e 's#https://localhost:#https://kubernetes.docker.internal:#g' \
-      /root/.kube-host/config > /root/.kube/config
+  KUBECONFIG=/root/.kube-host/config kubectl config view --minify --flatten --context docker-desktop \
+    | sed -e 's#https://127.0.0.1:#https://kubernetes.docker.internal:#g' -e 's#https://localhost:#https://kubernetes.docker.internal:#g' \
+    > /root/.kube/config
   kubectl config use-context docker-desktop >/dev/null 2>&1 || true
   echo "[pbl] kubeconfig ready (context: $(kubectl config current-context 2>/dev/null))"
 else

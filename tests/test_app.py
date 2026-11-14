@@ -1,6 +1,6 @@
 import pytest
 
-from app.main import app
+from app.main import PATIENTS, app
 
 
 @pytest.fixture
@@ -40,3 +40,20 @@ def test_add_patient(client):
 
 def test_add_patient_requires_name(client):
     assert client.post("/patients", json={}).status_code == 400
+
+
+def test_api_index(client):
+    r = client.get("/api")
+    assert r.status_code == 200
+    assert r.get_json()["service"] == "patient-records-api"
+
+
+def test_dashboard_escapes_html(client, monkeypatch):
+    monkeypatch.setitem(PATIENTS, 999, {"id": 999, "name": "<script>alert(1)</script>",
+                                        "age": 1, "ward": "Test"})
+    r = client.get("/")
+    body = r.get_data(as_text=True)
+    assert r.status_code == 200
+    assert "Patient Records System" in body
+    assert "<script>" not in body
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in body

@@ -1,0 +1,2 @@
+# Keep Linux line endings so shell scripts work inside Jenkins even if edited on Windows
+* text=auto eol=lf

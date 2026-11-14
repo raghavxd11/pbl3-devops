@@ -1,0 +1,23 @@
+# Start Jenkins:   docker compose up -d --build
+# Open:            http://localhost:8080
+services:
+  jenkins:
+    build: ./jenkins
+    container_name: jenkins
+    user: root                     # needed to use the Docker socket (local demo only)
+    ports:
+      - "127.0.0.1:8080:8080"      # only reachable from your own machine
+    environment:
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+      - GIT_REPO_URL=${GIT_REPO_URL}
+      - GIT_BRANCH=${GIT_BRANCH:-main}
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${USERPROFILE}/.kube:/root/.kube-host:ro   # Windows: C:\Users\<you>\.kube
+    extra_hosts:
+      - "kubernetes.docker.internal:host-gateway"
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  jenkins_home:

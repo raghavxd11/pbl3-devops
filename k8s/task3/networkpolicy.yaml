@@ -1,0 +1,31 @@
+# Zero-trust networking: block everything by default, then allow only
+# HTTP traffic into the API on port 5000 and DNS lookups out.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: pbl-task3
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress", "Egress"]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-ingress-and-dns
+  namespace: pbl-task3
+spec:
+  podSelector:
+    matchLabels:
+      app: patient-api
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 5000
+  egress:
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

@@ -1,0 +1,9 @@
+.git
+jenkins
+k8s
+reports
+docs
+*.md
+__pycache__
+.pytest_cache
+Jenkinsfile*

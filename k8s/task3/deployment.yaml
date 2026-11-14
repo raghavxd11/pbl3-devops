@@ -1,0 +1,64 @@
+# Hardened deployment for the healthcare Patient Records API
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: patient-api
+  namespace: pbl-task3
+  labels:
+    app: patient-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: patient-api
+  template:
+    metadata:
+      labels:
+        app: patient-api
+    spec:
+      serviceAccountName: patient-api
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: patient-api
+          image: IMAGE_PLACEHOLDER
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+          env:
+            - name: APP_VERSION
+              value: "VERSION_PLACEHOLDER"
+            - name: DB_PASSWORD            # comes from a Kubernetes Secret, never from Git
+              valueFrom:
+                secretKeyRef:
+                  name: patient-api-secrets
+                  key: DB_PASSWORD
+          securityContext:
+            privileged: false
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: 250m, memory: 128Mi }
+          readinessProbe:
+            httpGet: { path: /health, port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health, port: 5000 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          volumeMounts:
+            - name: tmp                    # only writable place (root FS is read-only)
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

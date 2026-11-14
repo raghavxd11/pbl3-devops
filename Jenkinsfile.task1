@@ -1,0 +1,75 @@
+// TASK 1 - CI/CD Pipeline to deploy a Dockerized application on Kubernetes using Jenkins
+// Flow: Checkout -> Unit Tests -> Build Docker Image -> Deploy to Kubernetes -> Smoke Test
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+    }
+
+    // CI: check GitHub every 2 minutes; every new commit triggers a build + deploy automatically
+    triggers {
+        pollSCM('H/2 * * * *')
+    }
+
+    environment {
+        IMAGE   = 'patient-api'
+        TAG     = "${env.BUILD_NUMBER}"
+        NS      = 'pbl-task1'
+        APP_URL = 'http://host.docker.internal:30080'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                sh 'git log -1 --oneline'
+            }
+        }
+
+        stage('Unit Tests') {
+            steps {
+                // Runs pytest inside the "test" stage of the multi-stage Dockerfile
+                sh 'docker build --target test -t ${IMAGE}:test .'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build --target runtime --build-arg APP_VERSION=${TAG} -t ${IMAGE}:${TAG} .'
+                sh 'docker images ${IMAGE}'
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                sh '''
+                    kubectl apply -f k8s/task1/namespace.yaml
+                    sed -e "s|IMAGE_PLACEHOLDER|${IMAGE}:${TAG}|" \
+                        -e "s|VERSION_PLACEHOLDER|${TAG}|" \
+                        k8s/task1/deployment.yaml | kubectl apply -f -
+                    kubectl apply -f k8s/task1/service.yaml
+                    kubectl -n ${NS} rollout status deployment/patient-api --timeout=180s
+                '''
+            }
+        }
+
+        stage('Smoke Test') {
+            steps {
+                sh 'bash scripts/smoke_test.sh ${APP_URL} ${TAG}'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Deployed version ${TAG} -> open http://localhost:30080"
+            sh 'kubectl -n ${NS} get deploy,pods,svc -o wide'
+        }
+        failure {
+            sh 'kubectl -n ${NS} get pods -o wide || true'
+            sh 'kubectl -n ${NS} describe deploy patient-api | tail -20 || true'
+        }
+    }
+}

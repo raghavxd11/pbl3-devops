@@ -1,0 +1,144 @@
+// TASK 2 - Automated Blue-Green Deployment using Jenkins, Kubernetes, Docker
+// Two identical environments (blue + green). Users only see the one the LIVE service points to.
+// New version -> deployed to the IDLE colour -> tested via PREVIEW service -> traffic switched instantly.
+// Old colour stays running, so rollback is one command and takes seconds.
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+    }
+
+    parameters {
+        choice(name: 'ACTION', choices: ['deploy', 'rollback'],
+               description: 'deploy = release a new version via blue-green | rollback = send traffic back to the previous colour')
+        booleanParam(name: 'MANUAL_APPROVAL', defaultValue: false,
+                     description: 'Pause and ask before switching live traffic')
+    }
+
+    environment {
+        IMAGE       = 'patient-api'
+        TAG         = "${env.BUILD_NUMBER}"
+        NS          = 'pbl-task2'
+        LIVE_URL    = 'http://host.docker.internal:30081'
+        PREVIEW_URL = 'http://host.docker.internal:30082'
+    }
+
+    stages {
+        stage('Detect Live Colour') {
+            steps {
+                script {
+                    sh 'kubectl apply -f k8s/task2/namespace.yaml'
+                    def live = sh(returnStdout: true,
+                        script: "kubectl -n ${NS} get svc patient-api-live -o jsonpath='{.spec.selector.color}' 2>/dev/null || true").trim()
+                    env.LIVE   = live ?: 'none'
+                    env.TARGET = (env.LIVE == 'blue') ? 'green' : 'blue'
+                    env.SWITCHED = 'false'
+                    echo "LIVE colour: ${env.LIVE}  |  IDLE colour (target): ${env.TARGET}"
+                }
+            }
+        }
+
+        stage('Unit Tests') {
+            when { expression { params.ACTION == 'deploy' } }
+            steps {
+                sh 'docker build --target test -t ${IMAGE}:test .'
+            }
+        }
+
+        stage('Build Docker Image') {
+            when { expression { params.ACTION == 'deploy' } }
+            steps {
+                sh 'docker build --target runtime --build-arg APP_VERSION=${TAG} -t ${IMAGE}:${TAG} .'
+            }
+        }
+
+        stage('Deploy to Idle Colour') {
+            when { expression { params.ACTION == 'deploy' } }
+            steps {
+                sh '''
+                    sed -e "s|COLOR_PLACEHOLDER|${TARGET}|g" \
+                        -e "s|IMAGE_PLACEHOLDER|${IMAGE}:${TAG}|" \
+                        -e "s|VERSION_PLACEHOLDER|${TAG}|" \
+                        k8s/task2/deployment.yaml | kubectl apply -f -
+                    kubectl -n ${NS} rollout status deployment/patient-api-${TARGET} --timeout=180s
+                '''
+            }
+        }
+
+        stage('Test Idle Colour (Preview)') {
+            when { expression { params.ACTION == 'deploy' } }
+            steps {
+                sh '''
+                    sed -e "s|COLOR_PLACEHOLDER|${TARGET}|g" k8s/task2/service-preview.yaml | kubectl apply -f -
+                    bash scripts/smoke_test.sh ${PREVIEW_URL} ${TAG}
+                '''
+            }
+        }
+
+        stage('Approval') {
+            when { expression { params.ACTION == 'deploy' && params.MANUAL_APPROVAL } }
+            steps {
+                input message: "Version ${env.TAG} passed tests on ${env.TARGET}. Switch LIVE traffic from ${env.LIVE} to ${env.TARGET}?"
+            }
+        }
+
+        stage('Switch Traffic') {
+            when { expression { params.ACTION == 'deploy' } }
+            steps {
+                script {
+                    if (env.LIVE == 'none') {
+                        // First ever deployment: create the live service
+                        sh 'sed -e "s|COLOR_PLACEHOLDER|${TARGET}|g" k8s/task2/service-live.yaml | kubectl apply -f -'
+                    } else {
+                        // THE blue-green switch: one atomic selector change, zero downtime
+                        sh """kubectl -n ${NS} patch svc patient-api-live -p '{"spec":{"selector":{"app":"patient-api","color":"${env.TARGET}"}}}'"""
+                    }
+                    env.SWITCHED = 'true'
+                    echo "LIVE traffic now on ${env.TARGET}"
+                }
+            }
+        }
+
+        stage('Verify Live') {
+            when { expression { params.ACTION == 'deploy' } }
+            steps {
+                sh 'bash scripts/smoke_test.sh ${LIVE_URL} ${TAG}'
+            }
+        }
+
+        stage('Rollback') {
+            when { expression { params.ACTION == 'rollback' } }
+            steps {
+                script {
+                    if (env.LIVE == 'none') {
+                        error('Nothing is deployed yet - run ACTION=deploy first')
+                    }
+                    def previous = (env.LIVE == 'blue') ? 'green' : 'blue'
+                    sh "kubectl -n ${NS} get deploy patient-api-${previous}"
+                    sh """kubectl -n ${NS} patch svc patient-api-live -p '{"spec":{"selector":{"app":"patient-api","color":"${previous}"}}}'"""
+                    echo "ROLLED BACK: LIVE traffic moved from ${env.LIVE} to ${previous}"
+                }
+            }
+        }
+    }
+
+    post {
+        failure {
+            script {
+                // Automatic rollback: if anything failed AFTER switching, go back to the old colour
+                if (params.ACTION == 'deploy' && env.SWITCHED == 'true' && env.LIVE != 'none') {
+                    echo "Deployment failed after switch - automatic rollback to ${env.LIVE}"
+                    sh """kubectl -n ${NS} patch svc patient-api-live -p '{"spec":{"selector":{"app":"patient-api","color":"${env.LIVE}"}}}'"""
+                } else {
+                    echo "Failure happened before the switch - users were never affected (still on ${env.LIVE})"
+                }
+            }
+        }
+        always {
+            sh 'kubectl -n ${NS} get deploy -L color -o wide || true'
+            sh "kubectl -n ${NS} get svc patient-api-live -o jsonpath='LIVE service -> colour: {.spec.selector.color}{\"\\n\"}' || true"
+        }
+    }
+}

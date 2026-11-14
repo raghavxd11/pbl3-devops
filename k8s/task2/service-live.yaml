@@ -1,0 +1,16 @@
+# LIVE service - real users hit this (http://localhost:30081).
+# Blue-green switch = changing this selector's "color" from blue to green (or back).
+apiVersion: v1
+kind: Service
+metadata:
+  name: patient-api-live
+  namespace: pbl-task2
+spec:
+  type: NodePort
+  selector:
+    app: patient-api
+    color: COLOR_PLACEHOLDER
+  ports:
+    - port: 80
+      targetPort: 5000
+      nodePort: 30081

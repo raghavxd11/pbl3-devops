@@ -1,0 +1,179 @@
+// TASK 3 - Secure DevOps (DevSecOps) Implementation in a Healthcare System
+// "Shift-left security": every stage is a security GATE. A serious finding FAILS the build,
+// so vulnerable code never reaches the cluster that holds patient data (PHI).
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+    }
+
+    parameters {
+        booleanParam(name: 'RUN_DAST', defaultValue: true,
+                     description: 'Run OWASP ZAP baseline scan against the running app')
+    }
+
+    environment {
+        IMAGE   = 'patient-api-secure'
+        TAG     = "${env.BUILD_NUMBER}"
+        NS      = 'pbl-task3'
+        APP_URL = 'http://host.docker.internal:30083'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                sh 'rm -rf reports && mkdir -p reports'
+            }
+        }
+
+        stage('1. Secret Scan (Gitleaks)') {
+            steps {
+                // Fails if passwords / API keys / tokens are committed anywhere in Git history
+                sh '''
+                    set +e
+                    gitleaks detect --source . --redact --verbose \
+                        --report-format json --report-path reports/gitleaks.json > reports/gitleaks.txt 2>&1
+                    RC=$?
+                    cat reports/gitleaks.txt
+                    exit $RC
+                '''
+            }
+        }
+
+        stage('2. SAST (Bandit)') {
+            steps {
+                // Static code analysis of the Python source. Gate = HIGH severity + HIGH confidence.
+                sh '''
+                    set +e
+                    bandit -r app -f txt -o reports/bandit.txt --exit-zero
+                    cat reports/bandit.txt
+                    bandit -r app -lll -iii -q
+                '''
+            }
+        }
+
+        stage('3. Dependency Scan (Trivy SCA)') {
+            steps {
+                // Known CVEs in the Python libraries we depend on. Gate = HIGH/CRITICAL.
+                sh '''
+                    set +e
+                    trivy fs --scanners vuln --severity HIGH,CRITICAL --exit-code 1 \
+                        --format table -o reports/trivy-dependencies.txt .
+                    RC=$?
+                    cat reports/trivy-dependencies.txt
+                    exit $RC
+                '''
+            }
+        }
+
+        stage('4. Dockerfile Lint (Hadolint)') {
+            steps {
+                sh '''
+                    set +e
+                    hadolint --failure-threshold error Dockerfile > reports/hadolint.txt 2>&1
+                    RC=$?
+                    cat reports/hadolint.txt
+                    [ -s reports/hadolint.txt ] || echo "No Dockerfile issues found"
+                    exit $RC
+                '''
+            }
+        }
+
+        stage('5. Unit Tests') {
+            steps {
+                sh 'docker build --target test -t ${IMAGE}:test .'
+            }
+        }
+
+        stage('6. Build Image') {
+            steps {
+                sh 'docker build --target runtime --build-arg APP_VERSION=${TAG} -t ${IMAGE}:${TAG} .'
+            }
+        }
+
+        stage('7. Image Scan (Trivy)') {
+            steps {
+                // Full report of HIGH+CRITICAL; gate fails on CRITICAL vulns that have a fix available
+                sh '''
+                    set +e
+                    trivy image --severity HIGH,CRITICAL --format table \
+                        -o reports/trivy-image.txt ${IMAGE}:${TAG}
+                    cat reports/trivy-image.txt
+                    trivy image --severity CRITICAL --ignore-unfixed --exit-code 1 --quiet ${IMAGE}:${TAG}
+                '''
+            }
+        }
+
+        stage('8. K8s Manifest Scan (Trivy IaC)') {
+            steps {
+                // Checks our Kubernetes YAML for insecure settings (root, privileged, no limits...)
+                sh '''
+                    set +e
+                    trivy config --severity HIGH,CRITICAL --exit-code 1 \
+                        --format table -o reports/trivy-k8s.txt k8s/task3
+                    RC=$?
+                    cat reports/trivy-k8s.txt
+                    [ $RC -eq 0 ] && echo "No HIGH/CRITICAL misconfigurations in k8s/task3"
+                    exit $RC
+                '''
+            }
+        }
+
+        stage('9. Secure Deploy') {
+            steps {
+                sh '''
+                    kubectl apply -f k8s/task3/namespace.yaml
+                    kubectl apply -f k8s/task3/serviceaccount.yaml
+                    kubectl apply -f k8s/task3/networkpolicy.yaml
+
+                    # Secret generated at deploy time and stored in Kubernetes - never in Git
+                    if ! kubectl -n ${NS} get secret patient-api-secrets >/dev/null 2>&1; then
+                        kubectl -n ${NS} create secret generic patient-api-secrets \
+                            --from-literal=DB_PASSWORD="$(head -c 24 /dev/urandom | base64)"
+                    fi
+
+                    sed -e "s|IMAGE_PLACEHOLDER|${IMAGE}:${TAG}|" \
+                        -e "s|VERSION_PLACEHOLDER|${TAG}|" \
+                        k8s/task3/deployment.yaml | kubectl apply -f -
+                    kubectl apply -f k8s/task3/service.yaml
+                    kubectl -n ${NS} rollout status deployment/patient-api --timeout=180s
+                    bash scripts/smoke_test.sh ${APP_URL} ${TAG}
+                '''
+            }
+        }
+
+        stage('10. DAST (OWASP ZAP)') {
+            when { expression { params.RUN_DAST } }
+            steps {
+                // Attacks the RUNNING app like a hacker would (passive baseline scan)
+                sh '''
+                    set +e
+                    docker run --rm --add-host host.docker.internal:host-gateway \
+                        ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t ${APP_URL} -I \
+                        > reports/zap-baseline.txt 2>&1
+                    RC=$?
+                    cat reports/zap-baseline.txt
+                    if [ $RC -eq 1 ]; then echo "ZAP found FAIL-level issues"; exit 1; fi
+                    exit 0
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            // All security reports downloadable from the build page ("Build Artifacts")
+            archiveArtifacts artifacts: 'reports/**', allowEmptyArchive: true
+        }
+        success {
+            echo "All security gates passed - secure version ${TAG} live at http://localhost:30083"
+            sh 'kubectl -n ${NS} get deploy,pods,svc,networkpolicy || true'
+        }
+        failure {
+            echo 'SECURITY GATE FAILED - deployment blocked. See the stage log + reports.'
+        }
+    }
+}

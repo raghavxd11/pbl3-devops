@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CareWell Hospital</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header>
+  <h1>CareWell Hospital</h1>
+  <p>Patient Records</p>
+</header>
+<main>
+  <table>
+    <thead><tr><th>ID</th><th>Name</th><th>Age</th><th>Ward</th></tr></thead>
+    <tbody>
+    {% for p in patients %}
+      <tr><td>{{ p.id }}</td><td>{{ p.name }}</td><td>{{ p.age }}</td><td>{{ p.ward }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</main>
+<footer>Version {{ version }} · pod {{ pod }}</footer>
+</body>
+</html>

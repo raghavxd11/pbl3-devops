@@ -1,0 +1,15 @@
+/* CareWell Hospital v1 - plain styles (CSP: style-src 'self', so no inline styles) */
+body {
+  margin: 0;
+  background: #f5f7fa;
+  color: #1f2937;
+  font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+}
+header { padding: 16px 24px; background: #0e7490; color: #fff; }
+header h1 { margin: 0; font-size: 24px; }
+header p { margin: 4px 0 0; opacity: 0.85; }
+main { max-width: 720px; margin: 24px auto; padding: 0 16px; }
+table { width: 100%; border-collapse: collapse; background: #fff; }
+th, td { padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: left; }
+th { background: #f0f9ff; }
+footer { text-align: center; color: #6b7280; font-size: 13px; margin-bottom: 24px; }

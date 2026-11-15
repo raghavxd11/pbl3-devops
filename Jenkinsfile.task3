@@ -116,6 +116,8 @@ pipeline {
                     trivy config --severity HIGH,CRITICAL --exit-code 1 \
                         --format table -o reports/trivy-k8s.txt k8s/task3
                     RC=$?
+                    # Empty report = nothing found; say so, so the archived report isn't blank
+                    [ -s reports/trivy-k8s.txt ] || echo "No HIGH/CRITICAL misconfigurations found in k8s/task3" > reports/trivy-k8s.txt
                     cat reports/trivy-k8s.txt
                     [ $RC -eq 0 ] && echo "No HIGH/CRITICAL misconfigurations in k8s/task3"
                     exit $RC

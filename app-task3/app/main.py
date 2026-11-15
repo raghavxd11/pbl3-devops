@@ -68,13 +68,25 @@ def security_headers(resp):
 
 # ---------------------------------------------------------------- audit trail
 
+# Actions listed on the /audit page: patient views, list views, creates and CSRF rejections.
+# Everything else (e.g. view_dashboard) is only written as an AUDIT log line.
+LISTED_ACTIONS = {
+    "view_patient", "read_patient",                              # patient views
+    "list_patients_ui", "list_patients", "list_appointments",    # list views
+    "create_patient",                                            # creates
+    "csrf_rejected",                                             # CSRF rejections
+}
+
+
 def record_audit(action, patient_id=None):
-    """Write the AUDIT log line (kubectl logs) and keep the event for the /audit page."""
+    """Write the AUDIT log line (kubectl logs); keep listed actions for the /audit page."""
     client = request.remote_addr
     if patient_id is None:
         audit.info("AUDIT action=%s client=%s", action, client)
     else:
         audit.info("AUDIT action=%s id=%s client=%s", action, patient_id, client)
+    if action not in LISTED_ACTIONS:
+        return
     event = {"time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
              "action": action, "patient_id": patient_id, "client": client}
     with _audit_lock:

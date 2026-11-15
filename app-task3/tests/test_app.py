@@ -350,12 +350,33 @@ def test_audit_page_records_access(client):
     assert "127.0.0.1" in body
 
 
-def test_audit_page_newest_first_and_audits_itself(client):
+def test_audit_page_newest_first(client):
     client.get("/patients-ui/1")
-    client.get("/audit")
-    assert [e["action"] for e in AUDIT_EVENTS][-2:] == ["view_patient", "view_audit_log"]
+    client.get("/patients-ui")
     body = client.get("/audit").get_data(as_text=True)
-    assert body.index("view_audit_log") < body.index("view_patient")
+    assert body.index("list_patients_ui") < body.index("view_patient")
+
+
+def test_audit_page_lists_views_lists_creates_and_csrf(client):
+    client.get("/patients-ui/1")                                   # patient view
+    client.get("/patients/2")                                      # patient view (API)
+    client.get("/patients-ui")                                     # list view
+    client.get("/appointments")                                    # list view
+    client.post("/patients", json={"name": "Listed"})              # create
+    client.post("/patients-ui/new", data=dict(VALID_FORM, csrf_token="x"))  # CSRF rejection
+    assert [e["action"] for e in AUDIT_EVENTS] == [
+        "view_patient", "read_patient", "list_patients_ui", "list_appointments",
+        "create_patient", "csrf_rejected"]
+
+
+def test_dashboard_and_audit_views_are_log_lines_only(client, caplog):
+    with caplog.at_level(logging.INFO, logger="audit"):
+        client.get("/")
+        client.get("/audit")
+    assert "AUDIT action=view_dashboard client=127.0.0.1" in caplog.text
+    assert "AUDIT action=view_audit_log client=127.0.0.1" in caplog.text
+    assert list(AUDIT_EVENTS) == []
+    assert "view_dashboard" not in client.get("/audit").get_data(as_text=True)
 
 
 def test_audit_log_lines_are_kept(client, caplog):

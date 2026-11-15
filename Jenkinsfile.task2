@@ -2,6 +2,7 @@
 // Two identical environments (blue + green). Users only see the one the LIVE service points to.
 // New version -> deployed to the IDLE colour -> tested via PREVIEW service -> traffic switched instantly.
 // Old colour stays running, so rollback is one command and takes seconds.
+// App: app-task2/ (v2 multi-page dashboard), image carewell-v2
 pipeline {
     agent any
 
@@ -18,7 +19,7 @@ pipeline {
     }
 
     environment {
-        IMAGE       = 'patient-api'
+        IMAGE       = 'carewell-v2'
         TAG         = "${env.BUILD_NUMBER}"
         NS          = 'pbl-task2'
         LIVE_URL    = 'http://host.docker.internal:30081'
@@ -43,14 +44,14 @@ pipeline {
         stage('Unit Tests') {
             when { expression { params.ACTION == 'deploy' } }
             steps {
-                sh 'docker build --target test -t ${IMAGE}:test .'
+                sh 'docker build --target test -t ${IMAGE}:test app-task2'
             }
         }
 
         stage('Build Docker Image') {
             when { expression { params.ACTION == 'deploy' } }
             steps {
-                sh 'docker build --target runtime --build-arg APP_VERSION=${TAG} -t ${IMAGE}:${TAG} .'
+                sh 'docker build --target runtime --build-arg APP_VERSION=${TAG} -t ${IMAGE}:${TAG} app-task2'
             }
         }
 

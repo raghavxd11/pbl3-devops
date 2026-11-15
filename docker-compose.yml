@@ -1,9 +1,13 @@
 # Start Jenkins:   docker compose up -d --build
 # Open:            http://localhost:8090
+# Fixed project name: keeps the volume name pbl3-devops_jenkins_home (build history)
+# no matter which folder this is run from.
+name: pbl3-devops
+
 services:
   jenkins:
     build: ./jenkins
-    container_name: jenkins
+    container_name: pbl3-jenkins          # unique name, no clash with other projects
     user: root                     # needed to use the Docker socket (local demo only)
     ports:
       - "127.0.0.1:8090:8080"      # only reachable from your own machine

@@ -1,6 +1,7 @@
 // TASK 3 - Secure DevOps (DevSecOps) Implementation in a Healthcare System
 // "Shift-left security": every stage is a security GATE. A serious finding FAILS the build,
 // so vulnerable code never reaches the cluster that holds patient data (PHI).
+// App: app-task3/ (v3 full secure CareWell system), image carewell-v3
 pipeline {
     agent any
 
@@ -15,7 +16,7 @@ pipeline {
     }
 
     environment {
-        IMAGE   = 'patient-api-secure'
+        IMAGE   = 'carewell-v3'
         TAG     = "${env.BUILD_NUMBER}"
         NS      = 'pbl-task3'
         APP_URL = 'http://host.docker.internal:30083'
@@ -48,9 +49,9 @@ pipeline {
                 // Static code analysis of the Python source. Gate = HIGH severity + HIGH confidence.
                 sh '''
                     set +e
-                    bandit -r app -f txt -o reports/bandit.txt --exit-zero
+                    bandit -r app-task3/app -f txt -o reports/bandit.txt --exit-zero
                     cat reports/bandit.txt
-                    bandit -r app -lll -iii -q
+                    bandit -r app-task3/app -lll -iii -q
                 '''
             }
         }
@@ -61,7 +62,7 @@ pipeline {
                 sh '''
                     set +e
                     trivy fs --scanners vuln --severity HIGH,CRITICAL --exit-code 1 \
-                        --format table -o reports/trivy-dependencies.txt .
+                        --format table -o reports/trivy-dependencies.txt app-task3
                     RC=$?
                     cat reports/trivy-dependencies.txt
                     exit $RC
@@ -73,7 +74,7 @@ pipeline {
             steps {
                 sh '''
                     set +e
-                    hadolint --failure-threshold error Dockerfile > reports/hadolint.txt 2>&1
+                    hadolint --failure-threshold error app-task3/Dockerfile > reports/hadolint.txt 2>&1
                     RC=$?
                     cat reports/hadolint.txt
                     [ -s reports/hadolint.txt ] || echo "No Dockerfile issues found"
@@ -84,13 +85,13 @@ pipeline {
 
         stage('5. Unit Tests') {
             steps {
-                sh 'docker build --target test -t ${IMAGE}:test .'
+                sh 'docker build --target test -t ${IMAGE}:test app-task3'
             }
         }
 
         stage('6. Build Image') {
             steps {
-                sh 'docker build --target runtime --build-arg APP_VERSION=${TAG} -t ${IMAGE}:${TAG} .'
+                sh 'docker build --target runtime --build-arg APP_VERSION=${TAG} -t ${IMAGE}:${TAG} app-task3'
             }
         }
 

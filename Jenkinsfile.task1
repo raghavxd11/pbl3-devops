@@ -1,4 +1,5 @@
 // TASK 1 - CI/CD Pipeline to deploy a Dockerized application on Kubernetes using Jenkins
+// App: app-task1/ (v1 basic site), image carewell-v1
 // Flow: Checkout -> Unit Tests -> Build Docker Image -> Deploy to Kubernetes -> Smoke Test
 pipeline {
     agent any
@@ -14,7 +15,7 @@ pipeline {
     }
 
     environment {
-        IMAGE   = 'patient-api'
+        IMAGE   = 'carewell-v1'
         TAG     = "${env.BUILD_NUMBER}"
         NS      = 'pbl-task1'
         APP_URL = 'http://host.docker.internal:30080'
@@ -31,13 +32,13 @@ pipeline {
         stage('Unit Tests') {
             steps {
                 // Runs pytest inside the "test" stage of the multi-stage Dockerfile
-                sh 'docker build --target test -t ${IMAGE}:test .'
+                sh 'docker build --target test -t ${IMAGE}:test app-task1'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build --target runtime --build-arg APP_VERSION=${TAG} -t ${IMAGE}:${TAG} .'
+                sh 'docker build --target runtime --build-arg APP_VERSION=${TAG} -t ${IMAGE}:${TAG} app-task1'
                 sh 'docker images ${IMAGE}'
             }
         }

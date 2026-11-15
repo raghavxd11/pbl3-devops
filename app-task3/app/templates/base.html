@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{% block head %}{% endblock %}
+<title>{% block title %}{% endblock %} · {{ hospital }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="topbar {{ env_class }}">
+  <div class="brand"><span class="logo">+</span> {{ hospital }}</div>
+  <div class="env-badge">
+    <span class="env-dot"></span>
+    <strong>{{ env_name }}</strong>
+    <span>v{{ version }}</span>
+    <span class="pod">pod: {{ pod }}</span>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="nav-title">Patient Records</div>
+    <a href="{{ url_for('dashboard') }}" class="{{ 'active' if active == 'dashboard' }}">Dashboard</a>
+    <a href="{{ url_for('patients_page') }}" class="{{ 'active' if active == 'patients' }}">Patients</a>
+    <a href="{{ url_for('new_patient_page') }}" class="{{ 'active' if active == 'new' }}">Add patient</a>
+    <a href="{{ url_for('doctors_page') }}" class="{{ 'active' if active == 'doctors' }}">Doctors</a>
+    <a href="{{ url_for('appointments_page') }}" class="{{ 'active' if active == 'appointments' }}">Appointments</a>
+  </nav>
+  <main class="content">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+</body>
+</html>

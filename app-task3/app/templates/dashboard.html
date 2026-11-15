@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% from "_status.html" import badge %}
+{% block head %}<meta http-equiv="refresh" content="5">{% endblock %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h1>Dashboard</h1>
+<p class="muted">Live overview · refreshes every 5 seconds</p>
+
+<section class="cards">
+  <div class="card stat"><div class="stat-label">Total patients</div><div class="stat-value">{{ stats.patients }}</div></div>
+  <div class="card stat"><div class="stat-label">Today's appointments</div><div class="stat-value">{{ stats.appointments }}</div></div>
+  <div class="card stat"><div class="stat-label">Doctors on duty</div><div class="stat-value">{{ stats.doctors_on_duty }}</div></div>
+  <div class="card stat"><div class="stat-label">Beds occupied</div><div class="stat-value">{{ stats.beds_occupied }}<small> / {{ stats.total_beds }}</small></div></div>
+</section>
+
+<div class="grid-2">
+  <section class="card">
+    <h2>Recent admissions</h2>
+    <table>
+      <thead><tr><th>Patient</th><th>Ward</th><th>Admitted</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for p in recent %}
+        <tr>
+          <td><a href="{{ url_for('patient_detail_page', patient_id=p.id) }}">{{ p.name }}</a></td>
+          <td>{{ p.ward }}</td>
+          <td>{{ p.admitted|nice_date }}</td>
+          <td>{{ badge(p.status) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>Today's appointments</h2>
+    <table>
+      <thead><tr><th>Time</th><th>Patient</th><th>Doctor</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for a in todays %}
+        <tr>
+          <td>{{ a.time }}</td>
+          <td>{{ patient_name(a.patient_id) }}</td>
+          <td>{{ doctor_name(a.doctor_id) }}</td>
+          <td>{{ badge(a.status) }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="muted">No appointments today.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+{% endblock %}

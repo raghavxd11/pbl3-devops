@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% from "_status.html" import badge %}
+{% block title %}Doctors{% endblock %}
+{% block content %}
+<h1>Doctors</h1>
+<section class="card">
+  <table>
+    <thead><tr><th>Name</th><th>Department</th><th>Availability</th></tr></thead>
+    <tbody>
+    {% for d in doctors %}
+      <tr><td>{{ d.name }}</td><td>{{ d.department }}</td><td>{{ badge(d.availability) }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

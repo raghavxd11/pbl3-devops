@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "_status.html" import badge %}
+{% block title %}Appointments{% endblock %}
+{% block content %}
+<h1>Appointments</h1>
+<section class="card">
+  <table>
+    <thead><tr><th>Date</th><th>Time</th><th>Patient</th><th>Doctor</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for a in appointments %}
+      <tr>
+        <td>{{ a.date|nice_date }}</td>
+        <td>{{ a.time }}</td>
+        <td><a href="{{ url_for('patient_detail_page', patient_id=a.patient_id) }}">{{ patient_name(a.patient_id) }}</a></td>
+        <td>{{ doctor_name(a.doctor_id) }}</td>
+        <td>{{ badge(a.status) }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

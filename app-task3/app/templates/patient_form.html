@@ -12,9 +12,11 @@
 {% endmacro %}
 {% block content %}
 <h1>Add patient</h1>
-{% if errors %}<div class="alert">Please fix the {{ errors|length }} highlighted field(s) below.</div>{% endif %}
+{% if errors.csrf %}<div class="alert">{{ errors.csrf }}</div>
+{% elif errors %}<div class="alert">Please fix the {{ errors|length }} highlighted field(s) below.</div>{% endif %}
 
 <form class="card form" method="post" action="{{ url_for('new_patient_page') }}" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <label class="{{ 'invalid' if errors.name }}">Full name
     <input type="text" name="name" value="{{ values.name }}" maxlength="100" required>
     {{ error('name') }}

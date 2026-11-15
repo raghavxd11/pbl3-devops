@@ -7,13 +7,20 @@
   <a class="btn" href="{{ url_for('new_patient_page') }}">+ Add patient</a>
 </div>
 
+<nav class="chips" aria-label="Filter by status">
+  {% for c in chips %}
+  <a class="chip {{ 'chip-active' if status == c.value }}" href="{{ url_for('patients_page', status=c.value or None, q=q or None) }}">{{ c.label }} <span class="chip-count">{{ c.count }}</span></a>
+  {% endfor %}
+</nav>
+
 <form class="search" method="get" action="{{ url_for('patients_page') }}">
+  {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
   <input type="search" name="q" value="{{ q }}" maxlength="100"
          placeholder="Search by name, ward, diagnosis, blood group, status or ID">
   <button class="btn" type="submit">Search</button>
-  {% if q %}<a class="btn btn-light" href="{{ url_for('patients_page') }}">Clear</a>{% endif %}
+  {% if q or status %}<a class="btn btn-light" href="{{ url_for('patients_page') }}">Clear</a>{% endif %}
 </form>
-{% if q %}<p class="muted">{{ patients|length }} result(s) for "{{ q }}"</p>{% endif %}
+{% if q or status %}<p class="muted">{{ patients|length }} result(s){% if status %} · status {{ status }}{% endif %}{% if q %} · matching "{{ q }}"{% endif %}</p>{% endif %}
 
 <section class="card">
   <table>

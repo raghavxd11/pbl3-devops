@@ -1,5 +1,13 @@
 {% extends "base.html" %}
 {% from "_status.html" import badge %}
+{% macro vital(kind, label, value, unit) %}
+{% set state = vital_status(kind, value) %}
+<div class="vital vital-{{ state }}">
+  <span class="stat-label">{{ label }}</span>
+  <strong>{{ value }}</strong><small>{{ unit }}</small>
+  <span class="vital-state">{{ state|upper if state != 'unknown' else 'NOT MEASURED' }}</span>
+</div>
+{% endmacro %}
 {% block title %}{{ p.name }}{% endblock %}
 {% block content %}
 <p><a href="{{ url_for('patients_page') }}">&larr; All patients</a></p>
@@ -7,6 +15,16 @@
   <h1>{{ p.name }} <span class="muted">#{{ p.id }}</span></h1>
   {{ badge(p.status) }}
 </div>
+
+<section class="card">
+  <h2>Vitals</h2>
+  <div class="vitals">
+    {{ vital('bp', 'Blood pressure', p.vitals.bp if p.vitals else '—', 'mmHg') }}
+    {{ vital('pulse', 'Pulse', p.vitals.pulse if p.vitals else '—', 'bpm') }}
+    {{ vital('temp', 'Temperature', p.vitals.temp if p.vitals else '—', '°C') }}
+  </div>
+  <p class="muted small">Normal ranges: BP below 140/90 and at least 90/60 mmHg · pulse 60–100 bpm · temperature 36.0–37.5 °C</p>
+</section>
 
 <div class="grid-2">
   <section class="card">
@@ -26,24 +44,29 @@
     <dl class="details">
       <dt>Diagnosis</dt><dd>{{ p.diagnosis or '—' }}</dd>
       <dt>Assigned doctor</dt><dd>{{ doctor_name(p.doctor_id) }}</dd>
+      <dt>Allergies</dt>
+      <dd>
+        {% for a in p.allergies or [] %}<span class="badge badge-allergy">{{ a }}</span> {% else %}<span class="muted">No known allergies</span>{% endfor %}
+      </dd>
+      <dt>Emergency contact</dt>
+      <dd>
+        {% if p.emergency_contact %}
+          {{ p.emergency_contact.name }} ({{ p.emergency_contact.relation }})<br>
+          {{ p.emergency_contact.phone|mask_phone }} <small class="muted">(masked, PHI)</small>
+        {% else %}<span class="muted">Not recorded</span>{% endif %}
+      </dd>
     </dl>
-    <h3>Vitals</h3>
-    <div class="vitals">
-      <div><span class="stat-label">Blood pressure</span><strong>{{ p.vitals.bp }}</strong><small>mmHg</small></div>
-      <div><span class="stat-label">Pulse</span><strong>{{ p.vitals.pulse }}</strong><small>bpm</small></div>
-      <div><span class="stat-label">Temperature</span><strong>{{ p.vitals.temp }}</strong><small>&deg;C</small></div>
-    </div>
   </section>
 </div>
 
 <section class="card">
-  <h2>Visit history</h2>
-  <ul class="timeline">
+  <h2>Visit timeline</h2>
+  <ol class="timeline">
   {% for v in p.visits|reverse %}
-    <li><span class="muted">{{ v.date|nice_date }}</span> {{ v.note }}</li>
+    <li><span class="timeline-date">{{ v.date|nice_date }}</span><span>{{ v.note }}</span></li>
   {% else %}
     <li class="muted">No visits recorded.</li>
   {% endfor %}
-  </ul>
+  </ol>
 </section>
 {% endblock %}

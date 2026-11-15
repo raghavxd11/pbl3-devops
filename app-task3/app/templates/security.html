@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Security Center{% endblock %}
+{% block content %}
+{% set from_pipeline = build_number != 'local' %}
+<div class="page-head">
+  <div>
+    <h1>Security Center</h1>
+    <p class="muted">How this build got here, and what protects patient data while it runs</p>
+  </div>
+</div>
+
+<section class="cards">
+  <div class="card stat"><div class="stat-label">Jenkins build</div><div class="stat-value">#{{ build_number }}</div></div>
+  <div class="card stat"><div class="stat-label">Git commit</div><div class="stat-value mono">{{ git_commit }}</div></div>
+  <div class="card stat"><div class="stat-label">Pipeline</div><div class="stat-value small-value">task3-devsecops</div></div>
+  <div class="card stat"><div class="stat-label">Security gates</div><div class="stat-value">{{ gates|length + 1 }}</div></div>
+</section>
+
+<div class="grid-2">
+  <section class="card">
+    <h2>Pipeline security gates</h2>
+    {% if from_pipeline %}
+    <p class="muted small">Stage 9 deploys only when every earlier gate passed, so build #{{ build_number }} cleared all of these.</p>
+    {% else %}
+    <p class="muted small">Not deployed by Jenkins (local run), so no gates have run for this copy.</p>
+    {% endif %}
+    <ul class="checklist">
+    {% for num, stage, tool, rule in gates %}
+      <li class="{{ 'check-pass' if from_pipeline else 'check-pending' }}">
+        <span class="check-mark">{{ '✓' if from_pipeline else '–' }}</span>
+        <span><strong>{{ tool }}</strong> <span class="muted">· stage {{ num }} {{ stage }}</span><br><small class="muted">{{ rule }}</small></span>
+      </li>
+    {% endfor %}
+      <li class="{{ 'check-pass' if from_pipeline else 'check-pending' }}">
+        <span class="check-mark">{{ '✓' if from_pipeline else '–' }}</span>
+        <span><strong>OWASP ZAP</strong> <span class="muted">· stage 10 DAST</span><br><small class="muted">Attacks this running build right after deploy; any FAIL fails the build (report in Jenkins)</small></span>
+      </li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>Active security controls</h2>
+    <ul class="checklist">
+    {% for c in controls %}
+      <li class="{{ 'check-pass' if c.ok else 'check-warn' }}">
+        <span class="check-mark">{{ '✓' if c.ok else '!' }}</span>
+        <span><strong>{{ c.name }}</strong> <span class="source source-{{ c.source|replace('/', '-') }}">{{ c.source }}</span><br><small class="muted">{{ c.detail }}</small></span>
+      </li>
+    {% endfor %}
+    </ul>
+    <p class="muted small"><span class="source source-live">live</span> checked by the app on this pod now · <span class="source source-app">app</span> built into the code · <span class="source source-k8s-task3">k8s/task3</span> enforced by Kubernetes</p>
+  </section>
+</div>
+{% endblock %}

@@ -1,10 +1,25 @@
 {% extends "base.html" %}
 {% from "_status.html" import badge %}
-{% block head %}<meta http-equiv="refresh" content="5">{% endblock %}
+{% from "_icons.html" import icon %}
 {% block title %}Dashboard{% endblock %}
 {% block content %}
-<h1>Dashboard</h1>
-<p class="muted">Live overview · refreshes every 5 seconds</p>
+{% if critical %}
+<section class="alert-critical">
+  <div class="alert-head">{{ icon('alert') }} <strong>{{ critical|length }} critical patient{{ 's' if critical|length != 1 }}</strong> need{{ 's' if critical|length == 1 }} attention</div>
+  <ul>
+  {% for p in critical %}
+    <li><a href="{{ url_for('patient_detail_page', patient_id=p.id) }}">{{ p.name }}</a> · {{ p.ward }}{% if p.diagnosis %} · {{ p.diagnosis }}{% endif %}</li>
+  {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<div class="page-head">
+  <div>
+    <h1>Dashboard</h1>
+    <p class="muted">Hospital overview for this pod</p>
+  </div>
+</div>
 
 <section class="cards">
   <div class="card stat"><div class="stat-label">Total patients</div><div class="stat-value">{{ stats.patients }}</div></div>
@@ -12,6 +27,44 @@
   <div class="card stat"><div class="stat-label">Doctors on duty</div><div class="stat-value">{{ stats.doctors_on_duty }}</div></div>
   <div class="card stat"><div class="stat-label">Beds occupied</div><div class="stat-value">{{ stats.beds_occupied }}<small> / {{ stats.total_beds }}</small></div></div>
 </section>
+
+<h2 class="section-title">Ward occupancy</h2>
+<section class="wards">
+  {% for w in wards %}
+  <div class="card ward ward-{{ w.level }}">
+    <div class="ward-head"><strong>{{ w.name }}</strong><span class="ward-pct">{{ w.percent }}%</span></div>
+    <div class="progress"><div class="bar pct-{{ w.pct5 }}"></div></div>
+    <div class="muted small">{{ w.used }} / {{ w.beds }} beds used</div>
+  </div>
+  {% endfor %}
+</section>
+
+<div class="grid-2">
+  <section class="card">
+    <h2>Today's appointments per doctor</h2>
+    <div class="chart">
+    {% for d in doctor_load %}
+      <div class="chart-row">
+        <span class="chart-label">{{ d.name }}</span>
+        <span class="chart-track"><span class="chart-bar pct-{{ d.pct5 }}"></span></span>
+        <span class="chart-value">{{ d.count }}</span>
+      </div>
+    {% endfor %}
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Recent activity</h2>
+    <ul class="feed">
+    {% for a in activity %}
+      <li class="feed-{{ a.action }}"><span class="feed-dot"></span><span>{{ a.text }}</span><span class="muted small">{{ a.time }} UTC</span></li>
+    {% else %}
+      <li class="muted">No patient activity on this pod yet. Open a patient record and it shows up here.</li>
+    {% endfor %}
+    </ul>
+    <p class="small"><a href="{{ url_for('audit_page') }}">Full audit log &rarr;</a></p>
+  </section>
+</div>
 
 <div class="grid-2">
   <section class="card">

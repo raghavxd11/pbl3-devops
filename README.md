@@ -14,7 +14,7 @@ basic site → improved dashboard → full secure system.
 |---|---|
 | v1 BASIC | One page `/`: CareWell Hospital header and a simple patient table (id, name, age, ward). |
 | v2 IMPROVED | Dashboard, Patients list with search, Doctors, Appointments, sidebar navigation, and a coloured environment bar from `APP_COLOR` (blue/green). |
-| v3 FINAL | Everything in v2 plus patient detail page with vitals and visit history, add-patient form with server-side validation, phone masking (PHI), `AUDIT` access logs and a JSON API. |
+| v3 FINAL (Secure Edition) | New navy/teal look with a "Secured by DevSecOps" badge. Dashboard with critical-patient alert, ward occupancy bars, appointments-per-doctor chart and activity feed. Patient detail with vitals status cards (normal/high/low), allergies, masked emergency contact and visit timeline. Status filter chips + search, add-patient form with validation and a CSRF token, phone masking (PHI), **Security Center** (`/security`: pipeline gates, build number, commit, live security controls) and **Audit Log** (`/audit`), plus `AUDIT` log lines and a JSON API. Still no JavaScript. |
 
 Every version has `/health`, `/version` (JSON with `"version"`) and the same security headers,
 so the pipelines' smoke test works for all three. Each folder is self-contained
@@ -98,7 +98,7 @@ kubectl -n pbl-task2 get svc patient-api-live -o jsonpath="{.spec.selector.color
 ## Task 3: DevSecOps for Healthcare
 
 1. Open `task3-devsecops` → **Build with Parameters** → Build. The first run pulls the ZAP image, which is slow. Untick RUN_DAST if you're short on time.
-2. Open http://localhost:30083: the full v3 system (click a patient for the detail page, try **Add patient**).
+2. Open http://localhost:30083: the full v3 Secure Edition. Click a patient for the detail page, try **Add patient**, then show **Security Center** (gates passed by this build number + commit, live checks such as uid 10001 and read-only filesystem) and **Audit Log** (every record you just opened).
 3. Ten stages: Gitleaks → Bandit → Trivy (dependencies) → Hadolint → Unit tests → Build → Trivy (image) → Trivy (k8s YAML) → Secure deploy → OWASP ZAP.
 4. Reports are on the build page under **Build Artifacts** (`reports/`).
 5. **"Security gate blocks a bad build" demo:**
@@ -121,6 +121,7 @@ kubectl -n pbl-task2 get svc patient-api-live -o jsonpath="{.spec.selector.color
 | Control | Where |
 |---|---|
 | No secrets in code | Gitleaks gate + K8s Secret generated at deploy time |
+| CSRF protection | Add-patient form has a session CSRF token; Flask `SECRET_KEY` is a K8s Secret (`patient-api-session`) generated at deploy time |
 | Secure code | Bandit SAST gate |
 | No vulnerable libraries or images | Trivy SCA + image scan gates |
 | Hardened container | Non-root user (uid 10001), read-only root FS, all Linux capabilities dropped, no privilege escalation, seccomp |

@@ -137,9 +137,17 @@ pipeline {
                         kubectl -n ${NS} create secret generic patient-api-secrets \
                             --from-literal=DB_PASSWORD="$(head -c 24 /dev/urandom | base64)"
                     fi
+                    # Flask SECRET_KEY (signs the session cookie holding the CSRF token), same idea
+                    if ! kubectl -n ${NS} get secret patient-api-session >/dev/null 2>&1; then
+                        kubectl -n ${NS} create secret generic patient-api-session \
+                            --from-literal=SECRET_KEY="$(head -c 32 /dev/urandom | base64)"
+                    fi
 
+                    # Build info for the Security Center page
+                    GIT_SHORT=$(git rev-parse --short HEAD)
                     sed -e "s|IMAGE_PLACEHOLDER|${IMAGE}:${TAG}|" \
-                        -e "s|VERSION_PLACEHOLDER|${TAG}|" \
+                        -e "s|VERSION_PLACEHOLDER|${TAG}|g" \
+                        -e "s|COMMIT_PLACEHOLDER|${GIT_SHORT}|" \
                         k8s/task3/deployment.yaml | kubectl apply -f -
                     kubectl apply -f k8s/task3/service.yaml
                     kubectl -n ${NS} rollout status deployment/patient-api --timeout=180s

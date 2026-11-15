@@ -1,30 +1,35 @@
+{% from "_icons.html" import icon %}
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 {% block head %}{% endblock %}
-<title>{% block title %}{% endblock %} · {{ hospital }}</title>
+<title>{% block title %}{% endblock %} · {{ hospital }} {{ edition }}</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-<header class="topbar {{ env_class }}">
-  <div class="brand"><span class="logo">+</span> {{ hospital }}</div>
-  <div class="env-badge">
-    <span class="env-dot"></span>
-    <strong>{{ env_name }}</strong>
-    <span>v{{ version }}</span>
-    <span class="pod">pod: {{ pod }}</span>
+<header class="topbar">
+  <div class="brand"><span class="logo">+</span> {{ hospital }} <span class="edition">— {{ edition }}</span></div>
+  <div class="top-badges">
+    <a class="shield-badge" href="{{ url_for('security_page') }}">🛡 Secured by DevSecOps</a>
+    <span class="env-badge {{ env_class }}"><span class="env-dot"></span><strong>{{ env_name }}</strong></span>
+    <span class="chip-dark">v{{ version }}</span>
+    <span class="chip-dark pod">pod: {{ pod }}</span>
   </div>
 </header>
 <div class="layout">
   <nav class="sidebar">
-    <div class="nav-title">Patient Records</div>
-    <a href="{{ url_for('dashboard') }}" class="{{ 'active' if active == 'dashboard' }}">Dashboard</a>
-    <a href="{{ url_for('patients_page') }}" class="{{ 'active' if active == 'patients' }}">Patients</a>
-    <a href="{{ url_for('new_patient_page') }}" class="{{ 'active' if active == 'new' }}">Add patient</a>
-    <a href="{{ url_for('doctors_page') }}" class="{{ 'active' if active == 'doctors' }}">Doctors</a>
-    <a href="{{ url_for('appointments_page') }}" class="{{ 'active' if active == 'appointments' }}">Appointments</a>
+    <div class="nav-title">Clinical</div>
+    <a href="{{ url_for('dashboard') }}" class="{{ 'active' if active == 'dashboard' }}">{{ icon('dashboard') }}<span>Dashboard</span></a>
+    <a href="{{ url_for('patients_page') }}" class="{{ 'active' if active == 'patients' }}">{{ icon('patients') }}<span>Patients</span></a>
+    <a href="{{ url_for('new_patient_page') }}" class="{{ 'active' if active == 'new' }}">{{ icon('add') }}<span>Add patient</span></a>
+    <a href="{{ url_for('doctors_page') }}" class="{{ 'active' if active == 'doctors' }}">{{ icon('doctors') }}<span>Doctors</span></a>
+    <a href="{{ url_for('appointments_page') }}" class="{{ 'active' if active == 'appointments' }}">{{ icon('appointments') }}<span>Appointments</span></a>
+    <div class="nav-title">Compliance</div>
+    <a href="{{ url_for('security_page') }}" class="{{ 'active' if active == 'security' }}">{{ icon('security') }}<span>Security Center</span></a>
+    <a href="{{ url_for('audit_page') }}" class="{{ 'active' if active == 'audit' }}">{{ icon('audit') }}<span>Audit Log</span></a>
+    <div class="nav-foot">PHI protected · access audited</div>
   </nav>
   <main class="content">
     {% block content %}{% endblock %}

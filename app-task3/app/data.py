@@ -12,9 +12,12 @@ def days_ago(n):
     return (TODAY - timedelta(days=n)).isoformat()
 
 
-TOTAL_BEDS = 40
-
 WARDS = ["General", "Cardiology", "Orthopedics", "Paediatrics", "Neurology", "ICU"]
+
+# Beds per ward (drives the ward-occupancy bars on the dashboard)
+WARD_BEDS = {"General": 6, "Cardiology": 3, "Orthopedics": 3, "Paediatrics": 3,
+             "Neurology": 2, "ICU": 2}
+TOTAL_BEDS = sum(WARD_BEDS.values())
 BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
 GENDERS = ["Female", "Male", "Other"]
 STATUSES = ["Admitted", "Critical", "Discharged"]
@@ -96,3 +99,22 @@ APPOINTMENTS = [
     {"id": 9, "patient_id": 2, "doctor_id": 2, "date": _tomorrow, "time": "10:00", "status": "Scheduled"},
     {"id": 10, "patient_id": 11, "doctor_id": 3, "date": _tomorrow, "time": "11:30", "status": "Scheduled"},
 ]
+
+# Allergies + emergency contact per patient (contact phone is PHI: masked in the UI)
+_EXTRA = {
+    1: (["Penicillin"], ("Rahul Sharma", "Husband", "9876500011")),
+    2: ([], ("Pooja Mehta", "Wife", "9823400022")),
+    3: (["Peanuts", "Ibuprofen"], ("Anil Pillai", "Father", "9845100033")),
+    4: (["Aspirin"], ("Sana Qureshi", "Daughter", "9810900044")),
+    5: ([], ("Ravi Joshi", "Son", "9898900055")),
+    6: (["Latex"], ("Gurpreet Kaur", "Sister", "9779000066")),
+    7: (["Sulfa drugs"], ("Lakshmi Rao", "Wife", "9440100077")),
+    8: ([], ("Amit Banerjee", "Husband", "9830500088")),
+    9: ([], ("Sneha Kulkarni", "Mother", "9822300099")),
+    10: (["Codeine"], ("Zoya Sheikh", "Daughter", "9867000101")),
+    11: (["Eggs"], ("Rina Chatterjee", "Mother", "9903100112")),
+    12: ([], ("Suresh Menon", "Husband", "9447500123")),
+}
+for _pid, (_allergies, (_name, _relation, _phone)) in _EXTRA.items():
+    PATIENTS[_pid]["allergies"] = _allergies
+    PATIENTS[_pid]["emergency_contact"] = {"name": _name, "relation": _relation, "phone": _phone}

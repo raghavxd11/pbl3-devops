@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Audit Log{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Audit Log</h1>
+    <p class="muted">Who accessed which patient record, and when (this pod, newest first, last {{ events|length }} events). Also written as <code>AUDIT</code> lines to the pod log.</p>
+  </div>
+</div>
+<section class="card">
+  <table>
+    <thead><tr><th>Time (UTC)</th><th>Action</th><th>Patient ID</th><th>Client IP</th></tr></thead>
+    <tbody>
+    {% for e in events %}
+      <tr>
+        <td class="mono">{{ e.time }}</td>
+        <td><span class="action action-{{ e.action }}">{{ e.action }}</span></td>
+        <td>{% if e.patient_id is not none %}<a href="{{ url_for('patient_detail_page', patient_id=e.patient_id) }}">#{{ e.patient_id }}</a>{% else %}<span class="muted">—</span>{% endif %}</td>
+        <td class="mono">{{ e.client }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4" class="muted">No events yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

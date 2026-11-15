@@ -369,14 +369,22 @@ def test_audit_page_lists_views_lists_creates_and_csrf(client):
         "create_patient", "csrf_rejected"]
 
 
-def test_dashboard_and_audit_views_are_log_lines_only(client, caplog):
+def test_dashboard_view_is_log_line_only(client, caplog):
     with caplog.at_level(logging.INFO, logger="audit"):
         client.get("/")
-        client.get("/audit")
     assert "AUDIT action=view_dashboard client=127.0.0.1" in caplog.text
-    assert "AUDIT action=view_audit_log client=127.0.0.1" in caplog.text
     assert list(AUDIT_EVENTS) == []
     assert "view_dashboard" not in client.get("/audit").get_data(as_text=True)
+
+
+def test_audit_page_audits_itself(client, caplog):
+    client.get("/patients-ui/1")
+    with caplog.at_level(logging.INFO, logger="audit"):
+        client.get("/audit")
+    assert "AUDIT action=view_audit_log client=127.0.0.1" in caplog.text
+    assert [e["action"] for e in AUDIT_EVENTS] == ["view_patient", "view_audit_log"]
+    body = client.get("/audit").get_data(as_text=True)
+    assert body.index("view_audit_log") < body.index("view_patient")  # newest first
 
 
 def test_audit_log_lines_are_kept(client, caplog):

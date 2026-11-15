@@ -68,13 +68,15 @@ def security_headers(resp):
 
 # ---------------------------------------------------------------- audit trail
 
-# Actions listed on the /audit page: patient views, list views, creates and CSRF rejections.
-# Everything else (e.g. view_dashboard) is only written as an AUDIT log line.
+# Actions listed on the /audit page: patient views, list views, creates, CSRF rejections
+# and views of the audit log itself. Everything else (e.g. view_dashboard) is only
+# written as an AUDIT log line.
 LISTED_ACTIONS = {
     "view_patient", "read_patient",                              # patient views
     "list_patients_ui", "list_patients", "list_appointments",    # list views
     "create_patient",                                            # creates
     "csrf_rejected",                                             # CSRF rejections
+    "view_audit_log",                                            # who looked at the audit log
 }
 
 

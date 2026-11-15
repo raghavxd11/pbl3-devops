@@ -7,6 +7,7 @@ metadata:
   namespace: pbl-task2
 spec:
   type: NodePort
+  sessionAffinity: ClientIP   # browser sticks to one pod (patient data is in-memory per pod)
   selector:
     app: patient-api
     color: COLOR_PLACEHOLDER

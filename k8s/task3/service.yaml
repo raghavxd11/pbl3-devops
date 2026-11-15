@@ -5,6 +5,7 @@ metadata:
   namespace: pbl-task3
 spec:
   type: NodePort
+  sessionAffinity: ClientIP   # browser sticks to one pod (patient data is in-memory per pod)
   selector:
     app: patient-api
   ports:

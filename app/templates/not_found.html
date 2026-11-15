@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Not found{% endblock %}
+{% block content %}
+<h1>Patient not found</h1>
+<p class="muted">No patient with that ID exists on this pod.</p>
+<p><a class="btn" href="{{ url_for('patients_page') }}">Back to patients</a></p>
+{% endblock %}

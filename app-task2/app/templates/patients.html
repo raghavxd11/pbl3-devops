@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "_status.html" import badge %}
+{% block title %}Patients{% endblock %}
+{% block content %}
+<h1>Patients</h1>
+
+<form class="search" method="get" action="{{ url_for('patients_page') }}">
+  <input type="search" name="q" value="{{ q }}" maxlength="100"
+         placeholder="Search by name, ward, diagnosis, blood group, status or ID">
+  <button class="btn" type="submit">Search</button>
+  {% if q %}<a class="btn btn-light" href="{{ url_for('patients_page') }}">Clear</a>{% endif %}
+</form>
+{% if q %}<p class="muted">{{ patients|length }} result(s) for "{{ q }}"</p>{% endif %}
+
+<section class="card">
+  <table>
+    <thead><tr><th>ID</th><th>Name</th><th>Age</th><th>Blood group</th><th>Ward</th><th>Diagnosis</th><th>Doctor</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for p in patients %}
+      <tr>
+        <td>#{{ p.id }}</td>
+        <td>{{ p.name }}</td>
+        <td>{{ p.age }}</td>
+        <td>{{ p.blood_group }}</td>
+        <td>{{ p.ward }}</td>
+        <td>{{ p.diagnosis }}</td>
+        <td>{{ doctor_name(p.doctor_id) }}</td>
+        <td>{{ badge(p.status) }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="8" class="muted">No patients found.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

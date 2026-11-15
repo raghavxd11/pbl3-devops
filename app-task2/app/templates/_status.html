@@ -1,0 +1,4 @@
+{# Coloured status pill, e.g. Admitted / Critical / Discharged / Scheduled / On duty #}
+{% macro badge(status) -%}
+<span class="badge badge-{{ (status or 'unknown')|lower|replace(' ', '-') }}">{{ status or '—' }}</span>
+{%- endmacro %}
